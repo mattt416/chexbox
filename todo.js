@@ -46,7 +46,7 @@ function complete(list, timestamp) {
   
   for (i = 0; i < list.length; i++) {
     if (list[i] !== null && list[i]['created_at'] === parseInt(timestamp)) {
-      found = list[i]
+      found = list[i];
       list[i].done = true;
       /*
         We break here so we can exit without inspecting any further entries,
@@ -133,7 +133,7 @@ function read(callback) {
 
 function write(list) {
   fs.writeFile('todo.json', JSON.stringify(list, null, '  '), 'utf-8', function (err) {
-    //
+    // TODO: Add some error handling here
   });
 }
 
