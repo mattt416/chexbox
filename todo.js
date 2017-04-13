@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
-fs = require('fs');
+var fs = require('fs');
+var program = require('commander');
 
 function ToDo(desc) {
   this.description = desc;
@@ -93,13 +94,14 @@ function display(list) {
 
   for (i = 0; i < list.length; i++) {
     // TODO: Add ability to show completed todos
-    if (list[i] !== null && list[i].done === false) {
+    //if (list[i] !== null && list[i].done === false) {
+    if (list[i] !== null) {
       console.log(list[i].created_at + '\t' + list[i].done + '\t' + list[i].description);
     }
   };
 }
 
-function read(callback) {
+function read(callback, filter = 'all') {
   var i,
       list,
       args = [];
@@ -119,6 +121,23 @@ function read(callback) {
       list = [];
     } else {
       list = JSON.parse(data);
+    }
+
+    for (i = 0; i < list.length; i++) {
+      if (list[i] === null) {
+        continue;
+      }
+
+      if (filter === 'done' && !list[i].done) {
+        /*
+          Deleting the entry doesn't seem to mark it as null, which happens
+          when you delete an entry and then write the file.
+        */
+        //delete list[i]
+        list[i] = null;
+      } else if (filter === 'pending' && list[i].done) {
+        list[i] = null;
+      }
     }
 
     /*
@@ -145,30 +164,47 @@ function sort(list) {
   console.log(list);
 }
 
-switch (process.argv[2]) {
-  case 'list':
-    read(display);
-    break;
-  case 'add':
-    if (process.argv[3]) {
-      read(add, process.argv[3]);
+program
+  .version('0.0.1')
+
+program
+  .command('list')
+  .description('list todos')
+  .option("-f, --filter [status]", "...")
+  .action(function(options){
+    if (options.filter === "done" || options.filter === "all") {
+      read(display, options.filter);
+    } else {
+      read(display, "pending");
     }
-    break;
-  case 'edit':
-    if (process.argv[3] && process.argv[4]) {
-      read(edit, process.argv[3], process.argv[4]);
-    }
-    break;
-  case 'rm':
-    if (process.argv[3]) {
-      read(rm, process.argv[3]);
-    }
-    break;
-  case 'complete':
-    if (process.argv[3]) {
-      read(complete, process.argv[3]);
-    }
-    break;
-  default:
-    console.log('woops!');
-}
+  });
+
+program
+  .command('add <desc>')
+  .description('add todo')
+  .action(function(desc, options){
+    read(add, desc);
+  });
+
+program
+  .command('edit <timestamp> <desc>')
+  .description('edit todo')
+  .action(function(timestamp, desc, options){
+    read(edit, timestamp, desc);
+  });
+
+program
+  .command('complete <timestamp>')
+  .description('complete todo')
+  .action(function(timestamp, options){
+    read(complete, timestamp);
+  });
+
+program
+  .command('rm <timestamp>')
+  .description('delete todo')
+  .action(function(timestamp, options){
+    read(rm, timestamp);
+  });
+
+program.parse(process.argv);
