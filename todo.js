@@ -6,7 +6,7 @@ var program = require('commander');
 function ToDo(desc) {
   this.description = desc;
   this.created_at = Date.now();
-  this.done = false;
+  this.status = "pending";
 }
 
 function add(list, desc) {
@@ -48,7 +48,7 @@ function complete(list, timestamp) {
   for (i = 0; i < list.length; i++) {
     if (list[i] !== null && list[i]['created_at'] === parseInt(timestamp)) {
       found = list[i];
-      list[i].done = true;
+      list[i].status = "done";
       /*
         We break here so we can exit without inspecting any further entries,
         while also being able to use the current values of list and i below.
@@ -71,7 +71,7 @@ function rm(list, timestamp) {
   for (i = 0; i < list.length; i++) {
     if (list[i] !== null && list[i]['created_at'] === parseInt(timestamp)) {
       found = list[i];
-      delete list[i];
+      list[i].status = "deleted";
       /*
         We break here so we can exit without inspecting any further entries,
         while also being able to use the current values of list and i below.
@@ -96,7 +96,7 @@ function display(list) {
     // TODO: Add ability to show completed todos
     //if (list[i] !== null && list[i].done === false) {
     if (list[i] !== null) {
-      console.log(list[i].created_at + '\t' + list[i].done + '\t' + list[i].description);
+      console.log(list[i].created_at + '\t' + list[i].status + '\t' + list[i].description);
     }
   };
 }
@@ -128,14 +128,14 @@ function read(callback, filter = 'all') {
         continue;
       }
 
-      if (filter === 'done' && !list[i].done) {
+      if (filter === 'done' && list[i].status != 'done') {
         /*
           Deleting the entry doesn't seem to mark it as null, which happens
           when you delete an entry and then write the file.
         */
         //delete list[i]
         list[i] = null;
-      } else if (filter === 'pending' && list[i].done) {
+      } else if (filter === 'pending' && list[i].status != 'pending') {
         list[i] = null;
       }
     }
