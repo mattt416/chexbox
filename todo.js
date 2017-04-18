@@ -3,27 +3,36 @@
 var PouchDB = require('pouchdb-node');
 var program = require('commander');
 
-var db = new PouchDB('todo');
-var remoteCouch = false;
+var localDB = new PouchDB('todo');
+var remoteDB = new PouchDB('http://localhost:5984/todo');
 
-function add(desc) {
+function syncDB() {
+  localDB.sync(remoteDB).on('complete', function () {
+    // yay, we're in sync!
+  }).on('error', function (err) {
+    // boo, we hit an error!
+  });
+}
+
+function newTodo(desc) {
   var todo = {
     _id: Date.now().toString(),
     description: desc,
     status: 'pending'
   };
 
-  db.put(todo, function callback(err, result) {
+  localDB.put(todo, function callback(err, result) {
     if (!err) {
       console.log('The following todo has been added:');
       console.log(todo);
+      syncDB();
     }
   });
 }
 
-function edit(timestamp, desc) {
-  db.get(timestamp, function(err, doc) {
-    db.put({
+function editTodo(timestamp, desc) {
+  localDB.get(timestamp, function(err, doc) {
+    localDB.put({
       _id: timestamp,
       _rev: doc._rev,
       status: doc.status,
@@ -32,13 +41,14 @@ function edit(timestamp, desc) {
       if (err) { return console.log(err); }
       console.log('The following todo has been updated:');
       console.log(doc);
+      syncDB();
     });
   });
 }
 
-function complete(timestamp) {
-  db.get(timestamp, function(err, doc) {
-    db.put({
+function completeTodo(timestamp) {
+  localDB.get(timestamp, function(err, doc) {
+    localDB.put({
       _id: timestamp,
       _rev: doc._rev,
       status: 'done',
@@ -47,32 +57,35 @@ function complete(timestamp) {
       if (err) { return console.log(err); }
       console.log('The following todo has been completed:');
       console.log(doc);
+      syncDB();
     });
   });
 }
 
-function rm(timestamp) {
-  db.get(timestamp, function(err, doc) {
+function rmTodo(timestamp) {
+  localDB.get(timestamp, function(err, doc) {
     if (err) { return console.log(err); }
-    db.remove(doc, function(err, response) {
+    localDB.remove(doc, function(err, response) {
       if (err) { return console.log(err); }
       console.log('The following todo has been deleted:');
       console.log(doc);
+      syncDB();
     });
   })
 }
 
-function list(filter = 'all') {
+function listTodos(filter = 'all') {
   var i;
 
   console.log('Timestamp\tStatus\tDescription');
 
-  db.allDocs({include_docs: true, descending: false}, function (err, doc) {
+  localDB.allDocs({include_docs: true, descending: false}, function (err, doc) {
     for (i = 0; i < doc.rows.length; i++) {
       if (filter === 'all' || filter === doc.rows[i].doc.status) {
         console.log(doc.rows[i].doc._id + '\t' + doc.rows[i].doc.status + '\t' + doc.rows[i].doc.description);
       }
     }
+    syncDB();
   });
 }
 
@@ -96,36 +109,35 @@ program
       options.filter = 'pending';
     }
 
-    list(options.filter);
+    listTodos(options.filter);
   });
 
 program
-  .command('add <desc>')
-  .description('add todo')
+  .command('new <desc>')
+  .description('new todo')
   .action(function(desc, options){
-    add(desc);
+    newTodo(desc);
   });
 
 program
   .command('edit <timestamp> <desc>')
   .description('edit todo')
   .action(function(timestamp, desc, options){
-    edit(timestamp, desc);
+    editTodo(timestamp, desc);
   });
 
 program
-  .command('complete <timestamp>')
-  .description('complete todo')
+  .command('done <timestamp>')
+  .description('done todo')
   .action(function(timestamp, options){
-    complete(timestamp);
+    completeTodo(timestamp);
   });
 
 program
   .command('rm <timestamp>')
   .description('delete todo')
   .action(function(timestamp, options){
-    rm(timestamp);
+    rmTodo(timestamp);
   });
-
 
 program.parse(process.argv);
