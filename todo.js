@@ -6,6 +6,10 @@ var program = require('commander');
 var localDB = new PouchDB('todo');
 var remoteDB = new PouchDB('http://localhost:5984/todo');
 
+function list(val) {
+  return val.split(',');
+}
+
 function syncDB() {
   localDB.sync(remoteDB).on('complete', function () {
     // yay, we're in sync!
@@ -14,11 +18,12 @@ function syncDB() {
   });
 }
 
-function newTodo(desc) {
+function newTodo(desc, tags) {
   var todo = {
     _id: Date.now().toString(),
     description: desc,
-    status: 'pending'
+    status: 'pending',
+    tags: tags
   };
 
   localDB.put(todo, function callback(err, result) {
@@ -30,13 +35,15 @@ function newTodo(desc) {
   });
 }
 
-function editTodo(timestamp, desc) {
+function editTodo(timestamp, desc, tags) {
+  console.log(tags);
   localDB.get(timestamp, function(err, doc) {
     localDB.put({
       _id: timestamp,
       _rev: doc._rev,
       status: doc.status,
-      description: desc
+      description: desc,
+      tags: tags // We should only update tags if they're passed in
     }, function(err, response) {
       if (err) { return console.log(err); }
       console.log('The following todo has been updated:');
@@ -74,15 +81,44 @@ function rmTodo(timestamp) {
   })
 }
 
-function listTodos(filter = 'all') {
+function listTodos(status = 'all', tags) {
   var i;
+  var j;
+  var found;
 
-  console.log('Timestamp\tStatus\tDescription');
+  console.log('Timestamp\tStatus\tTags\tDescription');
 
   localDB.allDocs({include_docs: true, descending: false}, function (err, doc) {
     for (i = 0; i < doc.rows.length; i++) {
-      if (filter === 'all' || filter === doc.rows[i].doc.status) {
-        console.log(doc.rows[i].doc._id + '\t' + doc.rows[i].doc.status + '\t' + doc.rows[i].doc.description);
+      found = false;
+
+      /*
+        This is to deal w/ legacy todos, any new document created going
+        forward will have this property set.
+      */
+      if (!doc.rows[i].doc.hasOwnProperty('tags')) {
+        doc.rows[i].doc.tags = [];
+      }
+
+      // TODO: Figure out how to filter these out via a PouchDB query
+      if (status === 'all' || status === doc.rows[i].doc.status) {
+        if (tags.length === 0) {
+          found = true;
+        } else if (tags.length > 0) {
+          for (j = 0; j < tags.length; j++) {
+            if (doc.rows[i].doc.tags.indexOf(tags[j]) !== -1) {
+              found = true;
+              break;
+            }
+          }
+        }
+      }
+
+      if (found === true) {
+        console.log(doc.rows[i].doc._id + '\t' +
+                    doc.rows[i].doc.status + '\t' +
+                    doc.rows[i].doc.tags.toString() + '\t' +
+                    doc.rows[i].doc.description);
       }
     }
     syncDB();
@@ -103,27 +139,39 @@ program
 program
   .command('list')
   .description('list todos')
-  .option("-f, --filter [status]", "...")
+  .option("-f, --status [status]", "...")
+  .option("-t, --tags <tags>", "...", list)
   .action(function(options){
-    if (options.filter === undefined) {
-      options.filter = 'pending';
+    if (options.status === undefined) {
+      options.status = 'pending';
+    }
+    if (options.tags === undefined) {
+      options.tags = [];
     }
 
-    listTodos(options.filter);
+    listTodos(options.status, options.tags);
   });
 
 program
   .command('new <desc>')
   .description('new todo')
+  .option("-t, --tags <tags>", "...", list)
   .action(function(desc, options){
-    newTodo(desc);
+    if (options.tags === undefined) {
+      options.tags = [];
+    }
+    newTodo(desc, options.tags);
   });
 
 program
   .command('edit <timestamp> <desc>')
   .description('edit todo')
+  .option("-t, --tags <tags>", "...", list)
   .action(function(timestamp, desc, options){
-    editTodo(timestamp, desc);
+    if (options.tags === undefined) {
+      options.tags = [];
+    }
+    editTodo(timestamp, desc, options.tags);
   });
 
 program
