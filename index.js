@@ -2,13 +2,12 @@
 
 var PouchDB = require('pouchdb-node');
 var program = require('commander');
+var chalk = require('chalk');
 
 var localDB = new PouchDB('todo');
 var remoteDB = new PouchDB('http://localhost:5984/todo');
 
-function list(val) {
-  return val.split(',');
-}
+var utils = require('./lib/utils')
 
 function syncDB() {
   localDB.sync(remoteDB).on('complete', function () {
@@ -28,15 +27,16 @@ function newTodo(desc, tags) {
 
   localDB.put(todo, function callback(err, result) {
     if (!err) {
-      console.log('The following todo has been added:');
-      console.log(todo);
+      console.log(chalk.black.bgCyan('Added'));
+      console.log('ID: ' + todo._id);
+      console.log('Description: ' + todo.description);
+      console.log('Tags: ' + todo.tags);
       syncDB();
     }
   });
 }
 
 function editTodo(timestamp, desc, tags) {
-  console.log(tags);
   localDB.get(timestamp, function(err, doc) {
     localDB.put({
       _id: timestamp,
@@ -46,8 +46,11 @@ function editTodo(timestamp, desc, tags) {
       tags: tags // We should only update tags if they're passed in
     }, function(err, response) {
       if (err) { return console.log(err); }
-      console.log('The following todo has been updated:');
-      console.log(doc);
+      console.log(chalk.black.bgCyan('Updated'));
+      console.log('ID: ' + doc._id);
+      console.log('Status: ' + doc.status);
+      console.log('Description: ' + doc.description);
+      console.log('Tags: ' +  doc.tags);
       syncDB();
     });
   });
@@ -62,8 +65,11 @@ function completeTodo(timestamp) {
       description: doc.description
     }, function(err, response) {
       if (err) { return console.log(err); }
-      console.log('The following todo has been completed:');
-      console.log(doc);
+      console.log(chalk.black.bgCyan('Done'));
+      console.log('ID: ' + doc._id);
+      console.log('Status: ' + doc.status);
+      console.log('Description: ' + doc.description);
+      console.log('Tags: ' +  doc.tags);
       syncDB();
     });
   });
@@ -74,8 +80,11 @@ function rmTodo(timestamp) {
     if (err) { return console.log(err); }
     localDB.remove(doc, function(err, response) {
       if (err) { return console.log(err); }
-      console.log('The following todo has been deleted:');
-      console.log(doc);
+      console.log(chalk.black.bgCyan('Removed'));
+      console.log('ID: ' + doc._id);
+      console.log('Status: ' + doc.status);
+      console.log('Description: ' + doc.description);
+      console.log('Tags: ' + doc.tags);
       syncDB();
     });
   })
@@ -85,11 +94,17 @@ function listTodos(status = 'all', tags) {
   var i;
   var j;
   var found;
+  var colour;
 
-  console.log('Timestamp\tStatus\tTags\tDescription');
+  console.log(chalk.black.bgCyan('ID' + '\t\t' +
+                                 'Age' + '\t' +
+                                 'Status' + '\t' +
+                                 'Tags' + '\t' +
+                                 'Description'))
 
   localDB.allDocs({include_docs: true, descending: false}, function (err, doc) {
     for (i = 0; i < doc.rows.length; i++) {
+      colour = chalk.white;
       found = false;
 
       /*
@@ -115,10 +130,14 @@ function listTodos(status = 'all', tags) {
       }
 
       if (found === true) {
-        console.log(doc.rows[i].doc._id + '\t' +
-                    doc.rows[i].doc.status + '\t' +
-                    doc.rows[i].doc.tags.toString() + '\t' +
-                    doc.rows[i].doc.description);
+        if (doc.rows[i].doc.status === 'done') {
+          colour = chalk.gray;
+        }
+        console.log(colour(doc.rows[i].doc._id + '\t' +
+                           utils.daysAgo(doc.rows[i].doc._id) + 'd' + '\t' +
+                           doc.rows[i].doc.status + '\t' +
+                           doc.rows[i].doc.tags + '\t' +
+                           doc.rows[i].doc.description));
       }
     }
     syncDB();
@@ -140,7 +159,7 @@ program
   .command('list')
   .description('list todos')
   .option("-f, --status [status]", "...")
-  .option("-t, --tags <tags>", "...", list)
+  .option("-t, --tags <tags>", "...", utils.list)
   .action(function(options){
     if (options.status === undefined) {
       options.status = 'pending';
@@ -155,7 +174,7 @@ program
 program
   .command('new <desc>')
   .description('new todo')
-  .option("-t, --tags <tags>", "...", list)
+  .option("-t, --tags <tags>", "...", utils.list)
   .action(function(desc, options){
     if (options.tags === undefined) {
       options.tags = [];
@@ -166,7 +185,7 @@ program
 program
   .command('edit <timestamp> <desc>')
   .description('edit todo')
-  .option("-t, --tags <tags>", "...", list)
+  .option("-t, --tags <tags>", "...", utils.list)
   .action(function(timestamp, desc, options){
     if (options.tags === undefined) {
       options.tags = [];
