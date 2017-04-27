@@ -207,4 +207,10 @@ program
     rmTodo(timestamp);
   });
 
+program
+  .command('*', '', {noHelp: true, isDefault: true})
+  .action(function(){
+    program.outputHelp();
+  });
+
 program.parse(process.argv);
