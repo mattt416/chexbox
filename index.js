@@ -1,13 +1,15 @@
 #!/usr/bin/env node
 
 var PouchDB = require('pouchdb-node');
-var program = require('commander');
 var chalk = require('chalk');
+var program = require('commander');
+
+var utils = require('./lib/utils')
 
 var localDB = new PouchDB('todo');
 var remoteDB = new PouchDB('http://localhost:5984/todo');
 
-var utils = require('./lib/utils')
+PouchDB.plugin(require('pouchdb-find'));
 
 function syncDB() {
   localDB.sync(remoteDB).on('complete', function () {
@@ -37,14 +39,23 @@ function newTodo(desc, tags) {
 }
 
 function editTodo(timestamp, desc, tags) {
+  var update;
+
   localDB.get(timestamp, function(err, doc) {
-    localDB.put({
+    update = {
       _id: timestamp,
       _rev: doc._rev,
       status: doc.status,
-      description: desc,
-      tags: tags // We should only update tags if they're passed in
-    }, function(err, response) {
+      description: desc
+    };
+
+    if (tags.length > 0) {
+      update.tags = tags;
+    } else {
+      update.tags = doc.tags;
+    }
+
+    localDB.put(update, function(err, response) {
       if (err) { return console.log(err); }
       console.log(chalk.black.bgCyan('Updated'));
       console.log('ID: ' + doc._id);
@@ -95,6 +106,16 @@ function listTodos(status = 'all', tags) {
   var j;
   var found;
   var colour;
+  var query = {};
+
+  if (status !== 'all') {
+    query.status = { $eq: status }
+  }
+
+  if (tags.length > 0) {
+    //query.tags = { $elemMatch: { $eq: 'home'} }
+    query.tags = { $all: tags }
+  }
 
   console.log(chalk.black.bgCyan('ID' + '\t\t' +
                                  'Age' + '\t' +
@@ -102,43 +123,21 @@ function listTodos(status = 'all', tags) {
                                  'Tags' + '\t' +
                                  'Description'))
 
-  localDB.allDocs({include_docs: true, descending: false}, function (err, doc) {
-    for (i = 0; i < doc.rows.length; i++) {
+  localDB.find({
+    selector: query
+  }, function (err, result) {
+    for (i = 0; i < result.docs.length; i++) {
       colour = chalk.white;
-      found = false;
 
-      /*
-        This is to deal w/ legacy todos, any new document created going
-        forward will have this property set.
-      */
-      if (!doc.rows[i].doc.hasOwnProperty('tags')) {
-        doc.rows[i].doc.tags = [];
+      if (result.docs[i].status === 'done') {
+        colour = chalk.gray;
       }
 
-      // TODO: Figure out how to filter these out via a PouchDB query
-      if (status === 'all' || status === doc.rows[i].doc.status) {
-        if (tags.length === 0) {
-          found = true;
-        } else if (tags.length > 0) {
-          for (j = 0; j < tags.length; j++) {
-            if (doc.rows[i].doc.tags.indexOf(tags[j]) !== -1) {
-              found = true;
-              break;
-            }
-          }
-        }
-      }
-
-      if (found === true) {
-        if (doc.rows[i].doc.status === 'done') {
-          colour = chalk.gray;
-        }
-        console.log(colour(doc.rows[i].doc._id + '\t' +
-                           utils.daysAgo(doc.rows[i].doc._id) + 'd' + '\t' +
-                           doc.rows[i].doc.status + '\t' +
-                           doc.rows[i].doc.tags + '\t' +
-                           doc.rows[i].doc.description));
-      }
+      console.log(colour(result.docs[i]._id + '\t' +
+                         utils.daysAgo(result.docs[i]._id) + 'd' + '\t' +
+                         result.docs[i].status + '\t' +
+                         result.docs[i].tags + '\t' +
+                         result.docs[i].description));
     }
     syncDB();
   });
