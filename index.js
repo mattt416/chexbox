@@ -12,8 +12,8 @@ program
 program
   .command('list')
   .description('list todos')
-  .option("-f, --status [status]", "...")
-  .option("-t, --tags <tags>", "...", utils.list)
+  .option("-f, --status [status]", "filter by status")
+  .option("-t, --tags <tags>", "filter by tags", utils.list)
   .action(function(options){
     if (options.status === undefined) {
       options.status = 'pending';
@@ -28,7 +28,7 @@ program
 program
   .command('new <desc>')
   .description('new todo')
-  .option("-t, --tags <tags>", "...", utils.list)
+  .option("-t, --tags <tags>", "add todo with specified tags", utils.list)
   .action(function(desc, options){
     if (options.tags === undefined) {
       options.tags = [];
@@ -39,7 +39,7 @@ program
 program
   .command('edit <timestamp> <desc>')
   .description('edit todo')
-  .option("-t, --tags <tags>", "...", utils.list)
+  .option("-t, --tags <tags>", "update tags on specified todo", utils.list)
   .action(function(timestamp, desc, options){
     if (options.tags === undefined) {
       options.tags = [];
@@ -49,7 +49,7 @@ program
 
 program
   .command('done <timestamp>')
-  .description('done todo')
+  .description('complete todo')
   .action(function(timestamp, options){
     todo.complete(timestamp);
   });
@@ -64,7 +64,12 @@ program
 program
   .command('*', '', {noHelp: true, isDefault: true})
   .action(function(){
+    console.log('here');
     program.outputHelp();
   });
 
-program.parse(process.argv);
+if (process.argv.length < 3) {
+  program.outputHelp();
+} else {
+  program.parse(process.argv);
+}
