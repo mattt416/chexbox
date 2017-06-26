@@ -10,6 +10,7 @@
   "license": "MIT",
   "dependencies": {
     "chalk": "^1.1.3",
+    "cli-table2": "^0.2.0",
     "commander": "^2.9.0",
     "pouchdb-find": "^6.2.0",
     "pouchdb-node": "^6.2.0"
