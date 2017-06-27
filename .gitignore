@@ -1,2 +1,5 @@
 todo/
 node_modules/
+.vagrant/
+Vagrantfile
+package-lock.json
