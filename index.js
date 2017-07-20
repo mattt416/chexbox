@@ -37,6 +37,13 @@ program
   });
 
 program
+  .command('show <timestamp>')
+  .description('show todo')
+  .action(function(timestamp, options){
+    todo.show(timestamp);
+  });
+
+program
   .command('edit <timestamp> <desc>')
   .description('edit todo')
   .option("-t, --tags <tags>", "update tags on specified todo", utils.list)
