@@ -23,6 +23,7 @@
     "pouchdb-node": "^6.2.0"
   },
   "devDependencies": {
+    "eslint": "^4.3.0",
     "mocha": "^3.3.0"
   }
 }
