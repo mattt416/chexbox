@@ -2,18 +2,18 @@
 
 var program = require('commander');
 var t = require('./lib/todo');
-var utils = require('./lib/utils')
+var utils = require('./lib/utils');
 
 var todo = new t.Todo();
 
 program
-  .version('0.0.1')
+  .version('0.2.0');
 
 program
   .command('list')
   .description('list todos')
-  .option("-f, --status [status]", "filter by status")
-  .option("-t, --tags <tags>", "filter by tags", utils.list)
+  .option('-f, --status [status]', 'filter by status')
+  .option('-t, --tags <tags>', 'filter by tags', utils.list)
   .action(function(options){
     if (options.status === undefined) {
       options.status = 'pending';
@@ -28,12 +28,12 @@ program
 program
   .command('new <desc>')
   .description('new todo')
-  .option("-t, --tags <tags>", "add todo with specified tags", utils.list)
+  .option('-t, --tags <tags>', 'add todo with specified tags', utils.list)
   .action(function(desc, options){
     if (options.tags === undefined) {
       options.tags = [];
     }
-    todo.new(desc, options.tags)
+    todo.new(desc, options.tags);
   });
 
 program
@@ -46,7 +46,7 @@ program
 program
   .command('edit <timestamp> <desc>')
   .description('edit todo')
-  .option("-t, --tags <tags>", "update tags on specified todo", utils.list)
+  .option('-t, --tags <tags>', 'update tags on specified todo', utils.list)
   .action(function(timestamp, desc, options){
     if (options.tags === undefined) {
       options.tags = [];
