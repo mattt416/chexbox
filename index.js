@@ -58,7 +58,14 @@ program
   .command('done <timestamp>')
   .description('complete todo')
   .action(function(timestamp, options){
-    todo.complete(timestamp);
+    todo.done(timestamp);
+  });
+
+program
+  .command('pending <timestamp>')
+  .description('mark done todo as pending')
+  .action(function(timestamp, options){
+    todo.pending(timestamp);
   });
 
 program
