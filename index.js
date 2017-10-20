@@ -76,6 +76,13 @@ program
   });
 
 program
+  .command('comment <timestamp> <comment>')
+  .description('add comment to todo')
+  .action(function(timestamp, comment, options){
+    todo.comment(timestamp, comment);
+  });
+
+program
   .command('*', '', {noHelp: true, isDefault: true})
   .action(function(){
     console.log('here');
