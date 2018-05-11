@@ -1,6 +1,6 @@
 {
   "name": "chexbox",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "A cli-based todo app w/ offline synching",
   "main": "index.js",
   "scripts": {
@@ -17,7 +17,6 @@
   "license": "MIT",
   "dependencies": {
     "chalk": "^1.1.3",
-    "cli-table2": "^0.2.0",
     "commander": "^2.9.0",
     "pouchdb-find": "^6.2.0",
     "pouchdb-node": "^6.2.0"
